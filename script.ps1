@@ -173,143 +173,130 @@ function Perform-PerformanceTweaks {
     Set-Service -Name WbioSrvc -StartupType Disabled
 
     # 34. Optimize System Environment Variables
-    [System.Environment]::SetEnvironmentVariable("TMP", "C:\Temp", "Machine")
-    [System.Environment]::SetEnvironmentVariable("TEMP", "C:\Temp", "Machine")
+    [Environment]::SetEnvironmentVariable("TEMP", "C:\Temp", "Machine")
 
-    # 35. Disable OneDrive Service
-    Set-Service -Name OneSyncSvc -StartupType Disabled
+    # 35. Disable File and Printer Sharing
+    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name AutoShareWks -Value 0
 
-    # 36. Optimize Microsoft Store Updates
-    Set-ItemProperty -Path 'HKLM:\Software\Policies\Microsoft\WindowsStore' -Name AutoDownload -Value 2
-
-    # 37. Disable Microsoft Edge Background Processes
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Edge\Main' -Name AllowPrelaunch -Value 0
-
-    # 38. Optimize Windows Task Scheduler
-    Set-Service -Name Schedule -StartupType Disabled
-
-    # 39. Disable Windows Push Notifications
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings' -Name Noclobber -Value 1
-
-    # 40. Optimize Windows Environment Variables
-    [System.Environment]::SetEnvironmentVariable("Path", "C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem", "Machine")
-
-    Write-Host "Advanced tweaks applied." -ForegroundColor Green
-    Read-Host "Press Enter to return to the main menu"
+    Write-Host "Performance tweaks applied successfully." -ForegroundColor Green
+    Pause
     Show-MainMenu
 }
 
-# Function to display appearance tweaks
+# Function to show appearance tweaks menu
 function Show-AppearanceTweaks {
     Clear-Host
     Write-Host "Appearance Tweaks" -ForegroundColor Green
-    # Add your appearance tweaks logic here
 
-    Read-Host "Press Enter to return to the main menu"
+    # Add your appearance tweaks options here
+    # Example:
+    # Write-Host "1. Change Theme"
+    # Write-Host "2. Adjust Font Size"
+    # Write-Host "3. Change Desktop Background"
+    # Write-Host "4. Adjust Color Settings"
+
+    Pause
     Show-MainMenu
 }
 
-# Function to display security tweaks
+# Function to show security tweaks menu
 function Show-SecurityTweaks {
     Clear-Host
     Write-Host "Security Tweaks" -ForegroundColor Green
-    Write-Host "Applying additional security enhancements..." -ForegroundColor Green
 
-    # Additional Security Tweaks
-    # 21. Disable Remote Desktop Services (if not used)
-    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 1
+    # Add your security tweaks options here
+    # Example:
+    # Write-Host "1. Enable Firewall"
+    # Write-Host "2. Disable Guest Account"
+    # Write-Host "3. Enable BitLocker"
+    # Write-Host "4. Enable Windows Defender"
 
-    # 22. Disable Guest Account
-    Set-LocalUser -Name Guest -Description "Disabled" -Enabled $false
-
-    # 23. Enable Firewall and Block Unwanted Ports
-    Enable-NetFirewallRule -DisplayName "Windows Remote Management (HTTP-In)"
-
-    # 24. Secure PowerShell Execution Policies
-    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope LocalMachine -Force
-
-    # 25. Disable PowerShell Script Execution (if not needed)
-    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell' -Name EnableScripts -Value 0
-
-    # 26. Secure Service Accounts
-    # Example: Change default service account passwords
-
-    # 27. Enable BitLocker Encryption (if supported)
-    # Example command: Enable-BitLocker -MountPoint "C:"
-
-    # 28. Restrict USB Device Usage
-    # Example: Disable USB storage devices
-
-    # 29. Enable Windows Defender and Regular Updates
-    Set-MpPreference -DisableRealtimeMonitoring $false
-
-    # 30. Monitor Event Logs for Security Breaches
-    Get-WinEvent -FilterHashTable @{LogName='Security'; StartTime=(Get-Date).AddDays(-1)}
-
-    # 31. Enable UAC (User Account Control)
-    Set-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name EnableLUA -Value 1
-
-    # 32. Configure SmartScreen Filter for Edge
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AppHost' -Name EnableSmartScreen -Value 1
-
-    # 33. Disable AutoPlay/AutoRun
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer' -Name NoDriveTypeAutoRun -Value 255
-
-    # 34. Harden Account Policies (Password Policies)
-    Set-LocalUser -Name Administrator -PasswordNeverExpires $true
-
-    # 35. Configure Windows Defender ATP (Advanced Threat Protection)
-    # Example: Enable ATP on Windows Security Center
-
-    # 36. Monitor and Block Malicious IPs
-    # Example: Use IP Blocklist for Windows Firewall
-
-    # 37. Enable Secure Boot (if supported)
-    # Example command: Set-FirmwareConfiguration -SecureBoot Enabled
-
-    # 38. Audit File and Folder Access
-    # Example: Configure audit policies for critical files
-
-    # 39. Encrypt Communication Channels
-    # Example: Use TLS for all network communications
-
-    # 40. Secure Browser Settings
-    # Example: Configure browser security settings
-
-    Write-Host "Security enhancements applied." -ForegroundColor Green
-    Read-Host "Press Enter to return to the main menu"
+    Pause
     Show-MainMenu
 }
 
-# Function to show spoofing options
+# Function to show spoofing options menu
 function Show-SpoofingOptions {
     Clear-Host
     Write-Host "Spoofing Options" -ForegroundColor Green
-    # Add your spoofing options logic here
 
-    Read-Host "Press Enter to return to the main menu"
+    # Add your spoofing options here
+    # Example:
+    # Write-Host "1. Spoof MAC Address"
+    # Write-Host "2. Spoof IP Address"
+    # Write-Host "3. Spoof Device ID"
+
+    Pause
     Show-MainMenu
 }
 
-# Function to display console output
+# Function to show console output
 function Show-ConsoleOutput {
     Clear-Host
     Write-Host "Console Output" -ForegroundColor Green
-    # Add your console output logic here
 
-    Read-Host "Press Enter to return to the main menu"
+    # Add your console output options here
+    # Example:
+    # Write-Host "1. View System Logs"
+    # Write-Host "2. View Performance Metrics"
+    # Write-Host "3. View Network Traffic"
+
+    Pause
     Show-MainMenu
 }
 
-# Function to display admin menu
+# Function to show admin menu
 function Show-AdminMenu {
     Clear-Host
     Write-Host "Admin Menu" -ForegroundColor Green
-    # Add your admin menu logic here
 
-    Read-Host "Press Enter to return to the main menu"
+    # Add your admin menu options here
+    # Example:
+    # Write-Host "1. Manage Users"
+    # Write-Host "2. Manage Services"
+    # Write-Host "3. Backup System"
+
+    Pause
     Show-MainMenu
 }
 
-# Entry point
-Show-MainMenu
+# Function to handle user input pause
+function Pause {
+    Write-Host "`nPress any key to continue..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+}
+
+# Function to handle banned users
+function Handle-BannedUsers {
+    param (
+        [string]$userName
+    )
+
+    if ($userName -eq "BannedUser") {
+        Write-Host "User $userName is banned from using this system." -ForegroundColor Red
+        Pause
+        Show-MainMenu
+    } else {
+        Write-Host "Welcome, $userName!" -ForegroundColor Green
+        Start-Sleep -Seconds 1
+        Show-MainMenu
+    }
+}
+
+# Main execution starts here
+Clear-Host
+Write-Host "Enter your username:"
+$userName = Read-Host
+
+# Check if user is banned
+$users = Get-Content $bannedUsersFile -ErrorAction SilentlyContinue
+if ($users -contains $userName) {
+    Handle-BannedUsers -userName $userName
+} else {
+    Write-Host "Validating credentials..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2  # Simulate authentication process
+
+    Write-Host "Welcome, $userName!" -ForegroundColor Green
+    Start-Sleep -Seconds 1
+    Show-MainMenu
+}
