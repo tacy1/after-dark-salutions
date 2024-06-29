@@ -1,60 +1,49 @@
 # Define banned users file path
 $bannedUsersFile = "C:\Path\To\BannedUsers.txt"
+# Define admin password
+$adminPassword = "89951bec-f3bb-4821-aab0-274101681528"
 
-# Function to play a system sound
-function Play-SystemSound {
-    [System.Media.SystemSounds]::Asterisk.Play()
+# Function to validate admin password
+function Validate-AdminPassword {
+    param (
+        [string]$password
+    )
+
+    if ($password -eq $adminPassword) {
+        return $true
+    } else {
+        return $false
+    }
 }
 
-# Function to display the main menu with fade-in effect
-function Show-MainMenu {
-    Clear-Host
-    $systemName = $env:COMPUTERNAME
-    $currentDate = Get-Date -Format "dddd, MMMM dd, yyyy"
-    
-    Write-Host "Welcome to AfterDark System Tweaks" -ForegroundColor Green
-    Write-Host "System: $systemName" -ForegroundColor Yellow
-    Write-Host "Date: $currentDate`n" -ForegroundColor Yellow
-    Start-Sleep -Milliseconds 500  # Wait for 0.5 seconds for a fade-in effect
+# Function to ban a user
+function Ban-User {
+    param (
+        [string]$userName
+    )
 
-    Write-Output @"
-      _____ _           _       _         _______           _             
-     / ____| |         | |     (_)       |__   __|         | |            
-    | (___ | |__  _   _| |_ ___ _ _ __ ___ | | ___  _ __  | |_ ___       
-     \___ \| '_ \| | | | __/ _ \ | '__/ _ \| |/ _ \| '_ \ | __/ _ \      
-     ____) | | | |_| | ||  __/ | | | (_) | | (_) | | | || || (_) |     
-    |_____/|_| |_|\__,_|\__\___|_|_|  \___/|_|\___/|_| |_| \__\___/      
-     _|  _|                 _|         _|_|_|_|_|           _|_|        
-     _|      _|_|_|  _|_|_|  _|_|_|  _|    _|  _|    _|_|_|  _|  _|_|    
-     _|  _|  _|    _|    _|  _|    _|_|    _|  _|  _|    _|  _|_|        
-       _|_|  _|    _|    _|  _|    _|_|  _|_|  _|  _|    _|  _|  _|_|_|  
-    
-    Choose an option:
-    
-    1. Performance Tweaks
-    2. Appearance Tweaks
-    3. Security Tweaks
-    4. Spoofing Options
-    5. Console Output
-    6. Admin Menu
-    
-    0. Exit
-"@
+    Add-Content -Path $bannedUsersFile -Value $userName
+    Write-Host "User '$userName' has been banned." -ForegroundColor Red
+    Pause
+    Show-AdminMenu
+}
 
-    $choice = Read-Host "Enter your choice"
-    switch ($choice) {
-        '1' { Perform-PerformanceTweaks }
-        '2' { Show-AppearanceTweaks }
-        '3' { Show-SecurityTweaks }
-        '4' { Show-SpoofingOptions }
-        '5' { Show-ConsoleOutput }
-        '6' { Show-AdminMenu }
-        '0' { Exit }
-        default {
-            Write-Host "Invalid choice. Please enter a valid option." -ForegroundColor Red
-            Show-MainMenu
-        }
+# Function to unban a user
+function Unban-User {
+    param (
+        [string]$userName
+    )
+
+    $bannedUsers = Get-Content $bannedUsersFile -ErrorAction SilentlyContinue
+    if ($bannedUsers -contains $userName) {
+        $bannedUsers = $bannedUsers | Where-Object { $_ -ne $userName }
+        $bannedUsers | Set-Content $bannedUsersFile
+        Write-Host "User '$userName' has been unbanned." -ForegroundColor Green
+    } else {
+        Write-Host "User '$userName' is not currently banned." -ForegroundColor Yellow
     }
+    Pause
+    Show-AdminMenu
 }
 
 # Function to perform advanced performance tweaks
@@ -223,14 +212,14 @@ function Show-SpoofingOptions {
     # Add your spoofing options here
     # Example:
     # Write-Host "1. Spoof MAC Address"
-    # Write-Host "2. Spoof IP Address"
-    # Write-Host "3. Spoof Device ID"
+    # Write-Host "2. Change IP Address"
+    # Write-Host "3. Hide User Agent"
 
     Pause
     Show-MainMenu
 }
 
-# Function to show console output
+# Function to show console output menu
 function Show-ConsoleOutput {
     Clear-Host
     Write-Host "Console Output" -ForegroundColor Green
@@ -238,23 +227,8 @@ function Show-ConsoleOutput {
     # Add your console output options here
     # Example:
     # Write-Host "1. View System Logs"
-    # Write-Host "2. View Performance Metrics"
-    # Write-Host "3. View Network Traffic"
-
-    Pause
-    Show-MainMenu
-}
-
-# Function to show admin menu
-function Show-AdminMenu {
-    Clear-Host
-    Write-Host "Admin Menu" -ForegroundColor Green
-
-    # Add your admin menu options here
-    # Example:
-    # Write-Host "1. Manage Users"
-    # Write-Host "2. Manage Services"
-    # Write-Host "3. Backup System"
+    # Write-Host "2. Monitor Network Activity"
+    # Write-Host "3. Display System Information"
 
     Pause
     Show-MainMenu
@@ -266,20 +240,80 @@ function Pause {
     $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 }
 
-# Function to handle banned users
-function Handle-BannedUsers {
-    param (
-        [string]$userName
-    )
+# Function to show admin menu
+function Show-AdminMenu {
+    Clear-Host
+    Write-Host "Admin Menu" -ForegroundColor Green
 
-    if ($userName -eq "BannedUser") {
-        Write-Host "User $userName is banned from using this system." -ForegroundColor Red
+    # Validate admin password before showing options
+    $enteredPassword = Read-Host "Enter admin password:" -AsSecureString
+    $enteredPasswordPlainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($enteredPassword))
+
+    if (Validate-AdminPassword -password $enteredPasswordPlainText) {
+        Write-Host "`nAdmin Menu Options:" -ForegroundColor Cyan
+        Write-Host "1. Ban a User"
+        Write-Host "2. Unban a User"
+        Write-Host "3. Backup System"
+        Write-Host "0. Return to Main Menu`n"
+
+        $choice = Read-Host "Enter your choice"
+
+        switch ($choice) {
+            '1' {
+                $userNameToBan = Read-Host "Enter username to ban"
+                Ban-User -userName $userNameToBan
+            }
+            '2' {
+                $userNameToUnban = Read-Host "Enter username to unban"
+                Unban-User -userName $userNameToUnban
+            }
+            '3' {
+                Write-Host "Backing up system..." -ForegroundColor Green
+                # Add your backup logic here
+                Pause
+                Show-AdminMenu
+            }
+            '0' { Show-MainMenu }
+            default {
+                Write-Host "Invalid choice. Please enter a valid option." -ForegroundColor Red
+                Pause
+                Show-AdminMenu
+            }
+        }
+    } else {
+        Write-Host "Invalid admin password. Access denied." -ForegroundColor Red
         Pause
         Show-MainMenu
-    } else {
-        Write-Host "Welcome, $userName!" -ForegroundColor Green
-        Start-Sleep -Seconds 1
-        Show-MainMenu
+    }
+}
+
+# Function to show main menu
+function Show-MainMenu {
+    Clear-Host
+    Write-Host "Main Menu" -ForegroundColor Green
+    Write-Host "1. Performance Tweaks"
+    Write-Host "2. Appearance Tweaks"
+    Write-Host "3. Security Tweaks"
+    Write-Host "4. Spoofing Options"
+    Write-Host "5. Console Output"
+    Write-Host "6. Admin Menu"
+    Write-Host "0. Exit`n"
+
+    $choice = Read-Host "Enter your choice"
+
+    switch ($choice) {
+        '1' { Perform-PerformanceTweaks }
+        '2' { Show-AppearanceTweaks }
+        '3' { Show-SecurityTweaks }
+        '4' { Show-SpoofingOptions }
+        '5' { Show-ConsoleOutput }
+        '6' { Show-AdminMenu }
+        '0' { Exit }
+        default {
+            Write-Host "Invalid choice. Please enter a valid option." -ForegroundColor Red
+            Pause
+            Show-MainMenu
+        }
     }
 }
 
@@ -291,7 +325,9 @@ $userName = Read-Host
 # Check if user is banned
 $users = Get-Content $bannedUsersFile -ErrorAction SilentlyContinue
 if ($users -contains $userName) {
-    Handle-BannedUsers -userName $userName
+    Write-Host "User $userName is banned from using this system." -ForegroundColor Red
+    Pause
+    Exit
 } else {
     Write-Host "Validating credentials..." -ForegroundColor Yellow
     Start-Sleep -Seconds 2  # Simulate authentication process
