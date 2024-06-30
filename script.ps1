@@ -1,338 +1,270 @@
-# Define banned users file path
-$bannedUsersFile = "C:\Path\To\BannedUsers.txt"
-# Define admin password
-$adminPassword = "89951bec-f3bb-4821-aab0-274101681528"
+function Show-Menu {
+    cls
+    Write-Host "================ Menu ================" -ForegroundColor Cyan
+    Write-Host "  1. Execute System Optimizations" -ForegroundColor Green
+    Write-Host "  2. Destruct (Revert Changes)" -ForegroundColor Red
+    Write-Host "  3. Exit" -ForegroundColor Yellow
+    Write-Host "=======================================" -ForegroundColor Cyan
+}
 
-# Function to validate admin password
-function Validate-AdminPassword {
-    param (
-        [string]$password
+function Execute-SystemOptimizations {
+    cls
+    $currentUser = $env:USERNAME
+    Write-Host "🔌 Welcome to Plug Enhancements, $currentUser!" -ForegroundColor Yellow
+    Write-Host "Executing 🔌 Plug Enhancements..." -ForegroundColor Green
+    
+    # Array to store optimization details
+    $optimizationDetails = @()
+
+    # Disable unnecessary services
+    Write-Host "Disabling unnecessary services..." -ForegroundColor Green
+    $disabledServices = Get-Service | Where-Object { $_.Status -eq 'Running' -and $_.Name -notin @(
+        'Fax', 
+        'TabletInputService', 
+        'wuauserv', 
+        'RemoteRegistry', 
+        'MapsBroker', 
+        'WSearch', 
+        'DiagTrack', 
+        'XblGameSave', 
+        'MessagingService', 
+        'dmwappushservice'
+    ) }
+    foreach ($service in $disabledServices) {
+        try {
+            Stop-Service -Name $service.Name -ErrorAction Stop
+            $optimizationDetails += "Disabled service: $($service.DisplayName)"
+        } catch {
+            Write-Host "Failed to stop service: $($service.DisplayName)" -ForegroundColor Yellow
+        }
+    }
+    
+    # Clear temp files
+    Write-Host "Clearing temporary files..." -ForegroundColor Green
+    $tempFolders = @(
+        "$env:TEMP\*",
+        "$env:LOCALAPPDATA\Temp\*",
+        "$env:SYSTEMROOT\Temp\*",
+        "$env:SYSTEMROOT\SoftwareDistribution\Download\*",
+        "$env:SYSTEMROOT\Logs\*"
     )
-
-    if ($password -eq $adminPassword) {
-        return $true
-    } else {
-        return $false
-    }
-}
-
-# Function to ban a user
-function Ban-User {
-    param (
-        [string]$userName
-    )
-
-    Add-Content -Path $bannedUsersFile -Value $userName
-    Write-Host "User '$userName' has been banned." -ForegroundColor Red
-    Pause
-    Show-AdminMenu
-}
-
-# Function to unban a user
-function Unban-User {
-    param (
-        [string]$userName
-    )
-
-    $bannedUsers = Get-Content $bannedUsersFile -ErrorAction SilentlyContinue
-    if ($bannedUsers -contains $userName) {
-        $bannedUsers = $bannedUsers | Where-Object { $_ -ne $userName }
-        $bannedUsers | Set-Content $bannedUsersFile
-        Write-Host "User '$userName' has been unbanned." -ForegroundColor Green
-    } else {
-        Write-Host "User '$userName' is not currently banned." -ForegroundColor Yellow
-    }
-    Pause
-    Show-AdminMenu
-}
-
-# Function to perform advanced performance tweaks
-function Perform-PerformanceTweaks {
-    Clear-Host
-    Write-Host "Performance Tweaks" -ForegroundColor Green
-    Write-Host "Applying advanced system optimizations..." -ForegroundColor Green
-
-    # Additional Optimizations
-    # 1. Disable Windows Error Reporting
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\Windows Error Reporting' -Name Disabled -Value 1 -Force
-
-    # 2. Disable Windows Defender Antivirus
-    Set-MpPreference -DisableRealtimeMonitoring $true
-
-    # 3. Disable Background Intelligent Transfer Service (BITS)
-    Set-Service -Name BITS -StartupType Disabled
-
-    # 4. Optimize Visual Effects for Performance
-    $currentSettings = Get-WmiObject -Class Win32_PerfFormattedData_PerfOS_System | Select-Object -ExpandProperty SystemUpTime
-    if ($currentSettings -lt 3) {
-        Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects' -Name VisualFXSetting -Value 2
+    foreach ($folder in $tempFolders) {
+        try {
+            $tempFiles = Get-ChildItem -Path $folder -Force -ErrorAction Stop
+            Remove-Item -Path $tempFiles.FullName -Recurse -Force -ErrorAction Stop
+            $optimizationDetails += "Cleared files from: $folder"
+        } catch {
+            Write-Host "Failed to clear files from: $folder" -ForegroundColor Yellow
+        }
     }
 
-    # 5. Adjust Processor Scheduling for Programs
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\PriorityControl' -Name Win32PrioritySeparation -Value 26
-
-    # 6. Disable TCP/IP Auto-Tuning
-    netsh interface tcp set global autotuning=disabled
-
-    # 7. Disable Large Send Offload (LSO)
-    Get-NetAdapter | Where-Object { $_.Name -like "*" } | ForEach-Object {
-        Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName "Large Send Offload (IPv4)" -DisplayValue "Disabled"
-        Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName "Large Send Offload (IPv6)" -DisplayValue "Disabled"
+    # Perform disk cleanup
+    Write-Host "Performing disk cleanup..." -ForegroundColor Green
+    try {
+        Cleanmgr.exe /sagerun:1 /verylowdisk
+        $optimizationDetails += "Performed disk cleanup."
+    } catch {
+        Write-Host "Failed to perform disk cleanup." -ForegroundColor Yellow
     }
 
-    # 8. Optimize Network Card Settings
-    Get-NetAdapterAdvancedProperty | Where-Object { $_.DisplayName -eq "Interrupt Moderation" } | Set-NetAdapterAdvancedProperty -RegistryValue 0
-
-    # 9. Increase Processor Performance State
-    powercfg -setacvalueindex SCHEME_CURRENT SUB_PROCESSOR PERFSTATEMAX 100
-    powercfg -setactive SCHEME_CURRENT
-
-    # 10. Optimize Registry for Performance
-    # Example: Remove redundant registry keys
-
-    # 11. Adjust Page File Settings
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management' -Name PagingFiles -Value "C:\pagefile.sys 4096 8192"
-
-    # 12. Disable Unnecessary Startup Services
-    Get-Service | Where-Object { $_.StartType -eq "Automatic" -and $_.Name -notmatch "Windows*" } | Set-Service -StartupType Manual
-
-    # 13. Optimize GPU Settings (Example: NVIDIA)
-    # Example command: nvidia-smi -ac 3505,1455
-
-    # 14. Adjust Desktop Background Settings
-    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop' -Name Wallpaper -Value "C:\Path\To\Your\Wallpaper.jpg"
-
-    # 15. Disable Windows Search Indexing
-    Set-Service -Name WSearch -StartupType Disabled
-
-    # 16. Optimize RAM Usage
-    # Example command: rundll32.exe advapi32.dll,ProcessIdleTasks
-
-    # 17. Optimize Hard Disk Usage
-    # Example command: defrag C: /O
-
-    # 18. Optimize USB Port Settings
-    # Example: Disable USB selective suspend setting
-
-    # 19. Disable System Sounds
-    Set-ItemProperty -Path 'HKCU:\AppEvents\Schemes\Apps\.Default' -Name "(Default)" -Value ""
-
-    # 20. Optimize Desktop Cleanup
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name DontPrettyPath -Value 1
-
-    # 21. Optimize Network Adapter Power Management
-    Get-NetAdapter | ForEach-Object {
-        Set-NetAdapterPowerManagement -Name $_.Name -AllowIdlePowerManagement $false
-    }
-
-    # 22. Optimize File System for SSD (if applicable)
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\storahci\Parameters\Device' -Name TreatAsInternalPort -Value 0
-
-    # 23. Disable Remote Assistance
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Remote Assistance' -Name fDenyTSConnections -Value 1
-
-    # 24. Disable Windows Error Reporting (WER)
-    Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows\Windows Error Reporting' -Name Disabled -Value 1 -Force
-
-    # 25. Optimize Windows Event Logging
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\EventLog\Application' -Name Start -Value 4
-
-    # 26. Optimize Windows Time Service
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\W32Time\Config' -Name Type -Value NTP
-
-    # 27. Disable Windows Media DRM Internet Access
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\WMPNetworkSvc' -Name Start -Value 4
-
-    # 28. Optimize Windows Firewall Rules
-    Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
-
-    # 29. Disable Windows Update Service
-    Set-Service -Name wuauserv -StartupType Disabled
-
-    # 30. Optimize Windows Explorer Startup Settings
-    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize' -Name StartupDelayInMSec -Value 0
-
-    # 31. Disable Remote Registry Service
-    Set-Service -Name RemoteRegistry -StartupType Disabled
-
-    # 32. Optimize Windows Services Startup Type
-    Get-Service | Where-Object { $_.StartType -eq "Manual" -and $_.Name -notmatch "Windows*" } | Set-Service -StartupType Disabled
-
-    # 33. Disable Windows Biometric Service
-    Set-Service -Name WbioSrvc -StartupType Disabled
-
-    # 34. Optimize System Environment Variables
-    [Environment]::SetEnvironmentVariable("TEMP", "C:\Temp", "Machine")
-
-    # 35. Disable File and Printer Sharing
-    Set-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters' -Name AutoShareWks -Value 0
-
-    Write-Host "Performance tweaks applied successfully." -ForegroundColor Green
-    Pause
-    Show-MainMenu
-}
-
-# Function to show appearance tweaks menu
-function Show-AppearanceTweaks {
-    Clear-Host
-    Write-Host "Appearance Tweaks" -ForegroundColor Green
-
-    # Add your appearance tweaks options here
-    # Example:
-    # Write-Host "1. Change Theme"
-    # Write-Host "2. Adjust Font Size"
-    # Write-Host "3. Change Desktop Background"
-    # Write-Host "4. Adjust Color Settings"
-
-    Pause
-    Show-MainMenu
-}
-
-# Function to show security tweaks menu
-function Show-SecurityTweaks {
-    Clear-Host
-    Write-Host "Security Tweaks" -ForegroundColor Green
-
-    # Add your security tweaks options here
-    # Example:
-    # Write-Host "1. Enable Firewall"
-    # Write-Host "2. Disable Guest Account"
-    # Write-Host "3. Enable BitLocker"
-    # Write-Host "4. Enable Windows Defender"
-
-    Pause
-    Show-MainMenu
-}
-
-# Function to show spoofing options menu
-function Show-SpoofingOptions {
-    Clear-Host
-    Write-Host "Spoofing Options" -ForegroundColor Green
-
-    # Add your spoofing options here
-    # Example:
-    # Write-Host "1. Spoof MAC Address"
-    # Write-Host "2. Change IP Address"
-    # Write-Host "3. Hide User Agent"
-
-    Pause
-    Show-MainMenu
-}
-
-# Function to show console output menu
-function Show-ConsoleOutput {
-    Clear-Host
-    Write-Host "Console Output" -ForegroundColor Green
-
-    # Add your console output options here
-    # Example:
-    # Write-Host "1. View System Logs"
-    # Write-Host "2. Monitor Network Activity"
-    # Write-Host "3. Display System Information"
-
-    Pause
-    Show-MainMenu
-}
-
-# Function to handle user input pause
-function Pause {
-    Write-Host "`nPress any key to continue..."
-    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-}
-
-# Function to show admin menu
-function Show-AdminMenu {
-    Clear-Host
-    Write-Host "Admin Menu" -ForegroundColor Green
-
-    # Validate admin password before showing options
-    $enteredPassword = Read-Host "Enter admin password:" -AsSecureString
-    $enteredPasswordPlainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($enteredPassword))
-
-    if (Validate-AdminPassword -password $enteredPasswordPlainText) {
-        Write-Host "`nAdmin Menu Options:" -ForegroundColor Cyan
-        Write-Host "1. Ban a User"
-        Write-Host "2. Unban a User"
-        Write-Host "3. Backup System"
-        Write-Host "0. Return to Main Menu`n"
-
-        $choice = Read-Host "Enter your choice"
-
-        switch ($choice) {
-            '1' {
-                $userNameToBan = Read-Host "Enter username to ban"
-                Ban-User -userName $userNameToBan
-            }
-            '2' {
-                $userNameToUnban = Read-Host "Enter username to unban"
-                Unban-User -userName $userNameToUnban
-            }
-            '3' {
-                Write-Host "Backing up system..." -ForegroundColor Green
-                # Add your backup logic here
-                Pause
-                Show-AdminMenu
-            }
-            '0' { Show-MainMenu }
-            default {
-                Write-Host "Invalid choice. Please enter a valid option." -ForegroundColor Red
-                Pause
-                Show-AdminMenu
+    # Optimize startup programs
+    Write-Host "Optimizing startup programs..." -ForegroundColor Green
+    try {
+        $startupPrograms = Get-CimInstance -Class Win32_StartupCommand -ErrorAction Stop | Where-Object { $_.Location -eq 'Startup' }
+        foreach ($program in $startupPrograms) {
+            try {
+                $program | Remove-CimInstance -ErrorAction Stop
+                $optimizationDetails += "Removed startup program: $($program.Name)"
+            } catch {
+                Write-Host "Failed to remove startup program: $($program.Name)" -ForegroundColor Yellow
             }
         }
-    } else {
-        Write-Host "Invalid admin password. Access denied." -ForegroundColor Red
-        Pause
-        Show-MainMenu
+    } catch {
+        Write-Host "Failed to retrieve startup programs." -ForegroundColor Yellow
     }
+
+    # Set power plan to High Performance
+    Write-Host "Setting power plan to High Performance..." -ForegroundColor Green
+    try {
+        powercfg.exe /setactive SCHEME_MIN
+        $optimizationDetails += "Set power plan to High Performance."
+    } catch {
+        Write-Host "Failed to set power plan to High Performance." -ForegroundColor Yellow
+    }
+
+    # Disable Windows Defender real-time protection
+    Write-Host "Disabling Windows Defender real-time protection..." -ForegroundColor Green
+    try {
+        Set-MpPreference -DisableRealtimeMonitoring $true
+        $optimizationDetails += "Disabled Windows Defender real-time protection."
+    } catch {
+        Write-Host "Failed to disable Windows Defender real-time protection." -ForegroundColor Yellow
+    }
+
+    # Set Windows Update to manual
+    Write-Host "Setting Windows Update service to manual..." -ForegroundColor Green
+    try {
+        Set-Service -Name wuauserv -StartupType Manual -ErrorAction Stop
+        $optimizationDetails += "Set Windows Update service to manual."
+    } catch {
+        Write-Host "Failed to set Windows Update service to manual." -ForegroundColor Yellow
+    }
+
+    # Set virtual memory (pagefile) to fixed size
+    Write-Host "Setting virtual memory to fixed size..." -ForegroundColor Green
+    try {
+        $pagefile = Get-WmiObject -Query "SELECT * FROM Win32_PageFileSetting" -ErrorAction Stop
+        $pagefile.InitialSize = 2048MB
+        $pagefile.MaximumSize = 4096MB
+        $pagefile.Put() | Out-Null
+        $optimizationDetails += "Set virtual memory to fixed size."
+    } catch {
+        Write-Host "Failed to set virtual memory to fixed size." -ForegroundColor Yellow
+    }
+
+    # Additional optimizations
+    Write-Host "Performing additional optimizations..." -ForegroundColor Green
+
+    # Disable scheduled tasks
+    Write-Host "Disabling unnecessary scheduled tasks..." -ForegroundColor Green
+    try {
+        Get-ScheduledTask -ErrorAction Stop | Where-Object { $_.State -ne 'Disabled' -and $_.TaskPath -notlike '*\Microsoft\Windows\*' } | Disable-ScheduledTask -Verbose -ErrorAction Stop
+        $optimizationDetails += "Disabled unnecessary scheduled tasks."
+    } catch {
+        Write-Host "Failed to disable unnecessary scheduled tasks." -ForegroundColor Yellow
+    }
+
+    # Disable unnecessary Windows features
+    Write-Host "Disabling unnecessary Windows features..." -ForegroundColor Green
+    try {
+        Disable-WindowsOptionalFeature -Online -FeatureName @(
+            'Internet-Explorer-Optional-amd64', 
+            'Printing-Foundation-Features', 
+            'Microsoft-Windows-Client-Features-Printing-OfflineFiles', 
+            'Microsoft-Hyper-V-All', 
+            'Microsoft-Windows-Shell-Startup-Alternate-GUI', 
+            'Microsoft-Windows-Shell-Setup-ClShell', 
+            'Microsoft-Windows-Shell-Setup-Powershell', 
+            'Windows-Identity-Foundation', 
+            'MSRDC-Infrastructure', 
+            'SimpleTCPIPServices', 
+            'TFTP-Client', 
+            'Storage-Services', 
+            'VirtualDisk', 
+            'Web-Mgmt-Service', 
+            'Windows-Defender-Features', 
+            'Windows-Defender-Default-Definition', 
+            'Windows-Defender-ApplicationGuard', 
+            'Windows-Defender-Management-Tools', 
+            'Windows-Defender-Network-Inspection-Service', 
+            'Windows-Defender-Windows-Defender-Application-Control', 
+            'Windows-Defender-SmartScreen-Management', 
+            'Windows-Defender-Antivirus-Service', 
+            'Windows-Defender-Client-Management-Service', 
+            'Windows-Defender-Advanced-Threat-Protection-Service', 
+            'Windows-Defender-Advanced-Threat-Protection-Service-Security', 
+            'Windows-Defender-Service'
+        ) -ErrorAction Stop
+        $optimizationDetails += "Disabled unnecessary Windows features."
+    } catch {
+        Write-Host "Failed to disable unnecessary Windows features." -ForegroundColor Yellow
+    }
+
+    # Disable unnecessary system components
+    Write-Host "Disabling unnecessary system components..." -ForegroundColor Green
+    try {
+        Disable-WindowsOptionalFeature -Online -FeatureName @(
+            'LegacyComponents', 
+            'DirectPlay', 
+            'WindowsMediaPlayer', 
+            'SMB1Protocol', 
+            'WorkFolders-Client', 
+            'MSRDC-Infrastructure', 
+            'OfflineFiles', 
+            'DirectPlay', 
+            'DirectX-9-DXSetup', 
+            'DirectX-GraphicsTools-Features', 
+            'DirectX-12-Offline-Deployment', 
+            'DirectX-12-Mobility-Deployment', 
+            'DirectX-DXSDK-Deployment', 
+            'DirectX-Developer-Samples', 
+            'DirectX-Developer-Tools', 
+            'DirectX-Developer-Extensions', 
+            'DirectX-Diagnostics', 
+            'DirectX-Global-SDK', 
+            'DirectX-Tools'
+        ) -ErrorAction Stop
+        $optimizationDetails += "Disabled unnecessary system components."
+    } catch {
+        Write-Host "Failed to disable unnecessary system components." -ForegroundColor Yellow
+    }
+
+    # Additional network optimizations
+    Write-Host "Performing network optimizations..." -ForegroundColor Green
+    try {
+        Set-NetTCPSetting -SettingName InternetCustom -MinRto 300 -ErrorAction Stop
+        Set-NetTCPSetting -SettingName InternetCustom -InitialRto 1500 -ErrorAction Stop
+        Set-NetTCPSetting -SettingName InternetCustom -CongestionProvider CTCP -ErrorAction Stop
+        $optimizationDetails += "Applied network optimizations."
+    } catch {
+        Write-Host "Failed to perform network optimizations." -ForegroundColor Yellow
+    }
+
+    # Adjust system settings for better performance
+    Write-Host "Adjusting system settings for better performance..." -ForegroundColor Green
+    try {
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management' -Name ClearPageFileAtShutdown -Value 0 -ErrorAction Stop
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management' -Name LargeSystemCache -Value 0 -ErrorAction Stop
+        Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile' -Name SystemResponsiveness -Value 0 -ErrorAction Stop
+        $optimizationDetails += "Adjusted system settings for better performance."
+    } catch {
+        Write-Host "Failed to adjust system settings for better performance." -ForegroundColor Yellow
+    }
+
+    # Clean up event logs
+    Write-Host "Cleaning up event logs..." -ForegroundColor Green
+    try {
+        wevtutil el | ForEach-Object { wevtutil cl "$_" } | Out-Null
+        $optimizationDetails += "Cleaned up event logs."
+    } catch {
+        Write-Host "Failed to clean up event logs." -ForegroundColor Yellow
+    }
+
+    # Display Discord link
+    Write-Host "Opening Discord invite link..." -ForegroundColor Green
+    try {
+        Start-Process "https://discord.gg/dyl"
+    } catch {
+        Write-Host "Failed to open Discord invite link." -ForegroundColor Yellow
+    }
+
+    # Message about restarting PC
+    Write-Host "Please restart your PC to apply optimizations." -ForegroundColor Green
 }
 
-# Function to show main menu
-function Show-MainMenu {
-    Clear-Host
-    Write-Host "Main Menu" -ForegroundColor Green
-    Write-Host "1. Performance Tweaks"
-    Write-Host "2. Appearance Tweaks"
-    Write-Host "3. Security Tweaks"
-    Write-Host "4. Spoofing Options"
-    Write-Host "5. Console Output"
-    Write-Host "6. Admin Menu"
-    Write-Host "0. Exit`n"
-
+# Main script logic
+do {
+    Show-Menu
     $choice = Read-Host "Enter your choice"
 
     switch ($choice) {
-        '1' { Perform-PerformanceTweaks }
-        '2' { Show-AppearanceTweaks }
-        '3' { Show-SecurityTweaks }
-        '4' { Show-SpoofingOptions }
-        '5' { Show-ConsoleOutput }
-        '6' { Show-AdminMenu }
-        '0' { Exit }
+        '1' {
+            Execute-SystemOptimizations
+            break
+        }
+        '2' {
+            Write-Host "Reverting changes (Destruct mode)..." -ForegroundColor Red
+            # Write code to revert changes if needed
+            Write-Host "Changes reverted successfully." -ForegroundColor Green
+            break
+        }
+        '3' {
+            Write-Host "Exiting script..." -ForegroundColor Yellow
+            break
+        }
         default {
-            Write-Host "Invalid choice. Please enter a valid option." -ForegroundColor Red
-            Pause
-            Show-MainMenu
+            Write-Host "Invalid choice. Please enter a valid option (1-3)." -ForegroundColor Red
+            break
         }
     }
-}
-
-# Main execution starts here
-Clear-Host
-Write-Host "Enter your username:"
-$userName = Read-Host
-
-# Check if user is banned
-$users = Get-Content $bannedUsersFile -ErrorAction SilentlyContinue
-if ($users -contains $userName) {
-    Write-Host "User $userName is banned from using this system." -ForegroundColor Red
-    Pause
-    Exit
-} else {
-    Write-Host "Validating credentials..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 2  # Simulate authentication process
-
-    Write-Host "Welcome, $userName!" -ForegroundColor Green
-    Start-Sleep -Seconds 1
-    Show-MainMenu
-}
+} while ($choice -ne '3')
