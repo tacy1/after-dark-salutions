@@ -1,13 +1,126 @@
+# Define function to show menu
 function Show-Menu {
     cls
     Write-Host "================ Menu ================" -ForegroundColor Cyan
     Write-Host "  1. Execute System Optimizations" -ForegroundColor Green
-    Write-Host "  2. Revert Changes" -ForegroundColor Red
+    Write-Host "  2. Destruct (Revert Changes)" -ForegroundColor Red
     Write-Host "  3. Exit" -ForegroundColor Yellow
     Write-Host "=======================================" -ForegroundColor Cyan
 }
 
-# Define function for system optimizations
+# Function for safely stopping a service
+function Stop-ServiceSafe {
+    param(
+        [string]$ServiceName
+    )
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if ($service -ne $null -and $service.Status -eq 'Running') {
+        try {
+            $service | Stop-Service -Force -ErrorAction StopService, Continue, SilentlyContinue
+            Write-Host "Stopped service: $($service.DisplayName)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Failed to stop service: $($service.DisplayName)" -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host "Service not found or already stopped: $ServiceName" -ForegroundColor Yellow
+    }
+}
+
+# Function for safely disabling a service
+function Disable-Service {
+    param(
+        [string]$ServiceName
+    )
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if ($service -ne $null) {
+        try {
+            Set-Service -Name $service.Name -StartupType Disabled -ErrorAction StopService, Continue, SilentlyContinue
+            Write-Host "Disabled service: $($service.DisplayName)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Failed to disable service: $($service.DisplayName)" -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host "Service not found: $ServiceName" -ForegroundColor Yellow
+    }
+}
+
+# Function for safely removing a service
+function Remove-Service {
+    param(
+        [string]$ServiceName
+    )
+    $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+    if ($service -ne $null) {
+        try {
+            $service | Stop-Service -Force -ErrorAction StopService, Continue, SilentlyContinue
+            Remove-Service $ServiceName
+            Write-Host "Removed service: $($service.DisplayName)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "Failed to remove service: $($service.DisplayName)" -ForegroundColor Red
+        }
+    }
+    else {
+        Write-Host "Service not found: $ServiceName" -ForegroundColor Yellow
+    }
+}
+
+# Function to clear browser cache for supported browsers
+function Clear-BrowserCache {
+    param (
+        [string]$Browser
+    )
+    switch ($Browser) {
+        "Edge" {
+            Clear-EdgeBrowserCache
+        }
+        "Chrome" {
+            Clear-ChromeBrowserCache
+        }
+        "Firefox" {
+            Clear-FirefoxBrowserCache
+        }
+        Default {
+            Write-Host "Unsupported browser: $Browser" -ForegroundColor Red
+        }
+    }
+}
+
+# Function to clear Microsoft Edge browser cache
+function Clear-EdgeBrowserCache {
+    Write-Host "Clearing Microsoft Edge browser cache..." -ForegroundColor Green
+    $EdgeCachePath = "$env:LOCALAPPDATA\Packages\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\AC\#!001\MicrosoftEdge\Cache"
+    Remove-Item -Path $EdgeCachePath -Force -Recurse -ErrorAction SilentlyContinue
+    Write-Host "Cleared Microsoft Edge browser cache." -ForegroundColor Green
+}
+
+# Function to clear Google Chrome browser cache
+function Clear-ChromeBrowserCache {
+    Write-Host "Clearing Google Chrome browser cache..." -ForegroundColor Green
+    $ChromeCachePath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache"
+    Remove-Item -Path $ChromeCachePath -Force -Recurse -ErrorAction SilentlyContinue
+    Write-Host "Cleared Google Chrome browser cache." -ForegroundColor Green
+}
+
+# Function to clear Mozilla Firefox browser cache
+function Clear-FirefoxBrowserCache {
+    Write-Host "Clearing Mozilla Firefox browser cache..." -ForegroundColor Green
+    $FirefoxCachePath = "$env:LOCALAPPDATA\Mozilla\Firefox\Profiles"
+    $FirefoxProfiles = Get-ChildItem -Path $FirefoxCachePath -Directory
+    foreach ($profile in $FirefoxProfiles) {
+        $cachePath = Join-Path -Path $profile.FullName -ChildPath 'cache2'
+        if (Test-Path -Path $cachePath) {
+            Remove-Item -Path $cachePath -Force -Recurse -ErrorAction SilentlyContinue
+        }
+    }
+    Write-Host "Cleared Mozilla Firefox browser cache." -ForegroundColor Green
+}
+
+# Function to execute system optimizations
 function Execute-SystemOptimizations {
     cls
     $currentUser = $env:USERNAME
@@ -16,125 +129,6 @@ function Execute-SystemOptimizations {
 
     # Array to store optimization details
     $optimizationDetails = @()
-
-    # Function to safely stop services
-    function Stop-ServiceSafe {
-        param(
-            [string]$ServiceName
-        )
-        $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-        if ($service -ne $null -and $service.Status -eq 'Running') {
-            try {
-                $service | Stop-Service -Force -ErrorAction StopService, Continue, SilentlyContinue
-                $optimizationDetails += "Stopped service: $($service.DisplayName)"
-            }
-            catch {
-                $optimizationDetails += "Failed to stop service: $($service.DisplayName)"
-            }
-        }
-        else {
-            $optimizationDetails += "Service not found or already stopped: $ServiceName"
-        }
-    }
-
-    # Function to safely disable services
-    function Disable-Service {
-        param(
-            [string]$ServiceName
-        )
-        $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-        if ($service -ne $null) {
-            try {
-                Set-Service -Name $service.Name -StartupType Disabled -ErrorAction StopService, Continue, SilentlyContinue
-                $optimizationDetails += "Disabled service: $($service.DisplayName)"
-            }
-            catch {
-                $optimizationDetails += "Failed to disable service: $($service.DisplayName)"
-            }
-        }
-        else {
-            $optimizationDetails += "Service not found: $ServiceName"
-        }
-    }
-
-    # Function to safely remove services
-    function Remove-Service {
-        param(
-            [string]$ServiceName
-        )
-        $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-        if ($service -ne $null) {
-            try {
-                $service | Stop-Service -Force -ErrorAction StopService, Continue, SilentlyContinue
-                Remove-Service $ServiceName
-                $optimizationDetails += "Removed service: $($service.DisplayName)"
-            }
-            catch {
-                $optimizationDetails += "Failed to remove service: $($service.DisplayName)"
-            }
-        }
-        else {
-            $optimizationDetails += "Service not found: $ServiceName"
-        }
-    }
-
-    # Function to safely set service startup type to manual
-    function Set-ServiceManual {
-        param(
-            [string]$ServiceName
-        )
-        $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
-        if ($service -ne $null -and $service.Status -eq 'Running') {
-            try {
-                Set-Service -Name $ServiceName -StartupType Manual -ErrorAction StopService, Continue, SilentlyContinue
-                $optimizationDetails += "Set service $ServiceName to Manual"
-            }
-            catch {
-                $optimizationDetails += "Failed to set $ServiceName to Manual"
-            }
-        }
-        else {
-            $optimizationDetails += "Service not found or already set to Manual: $ServiceName"
-        }
-    }
-
-    # Function to safely delete registry keys
-    function Remove-RegistryKey {
-        param(
-            [string]$KeyPath
-        )
-        if (Test-Path -Path $KeyPath) {
-            try {
-                Remove-Item -Path $KeyPath -Recurse -Force -ErrorAction StopService, Continue, SilentlyContinue
-                $optimizationDetails += "Removed registry key: $KeyPath"
-            }
-            catch {
-                $optimizationDetails += "Failed to remove registry key: $KeyPath"
-            }
-        }
-        else {
-            $optimizationDetails += "Registry key not found: $KeyPath"
-        }
-    }
-
-    # Function to safely delete files and directories
-    function Remove-FilesAndDirectories {
-        param(
-            [string]$Path
-        )
-        if (Test-Path -Path $Path) {
-            try {
-                Remove-Item -Path $Path -Recurse -Force -ErrorAction StopService, Continue, SilentlyContinue
-                $optimizationDetails += "Removed files and directories at: $Path"
-            }
-            catch {
-                $optimizationDetails += "Failed to remove files and directories at: $Path"
-            }
-        }
-        else {
-            $optimizationDetails += "Path not found: $Path"
-        }
-    }
 
     # Disable unnecessary services
     Write-Host "Disabling unnecessary services..." -ForegroundColor Green
@@ -154,7 +148,7 @@ function Execute-SystemOptimizations {
         Remove-Service -ServiceName $service
     }
 
-    # Clear temp files
+    # Clear temporary files
     Write-Host "Clearing temporary files..." -ForegroundColor Green
     $tempFiles = Get-ChildItem -Path "$env:TEMP\*" -Force -ErrorAction SilentlyContinue
     $tempFiles | Remove-Item -Recurse -Force
@@ -195,57 +189,6 @@ function Execute-SystemOptimizations {
     $pagefile.MaximumSize = 4096MB
     $pagefile.Put()
     $optimizationDetails += "Set virtual memory to fixed size."
-
-    # Clear browser caches
-    function Clear-BrowserCache {
-        param (
-            [string]$Browser
-        )
-        switch ($Browser) {
-            "Edge" {
-                Clear-EdgeBrowserCache
-            }
-            "Chrome" {
-                Clear-ChromeBrowserCache
-            }
-            "Firefox" {
-                Clear-FirefoxBrowserCache
-            }
-            Default {
-                Write-Host "Unsupported browser: $Browser" -ForegroundColor Red
-            }
-        }
-    }
-
-    # Function to clear Edge browser cache
-    function Clear-EdgeBrowserCache {
-        Write-Host "Clearing Microsoft Edge browser cache..." -ForegroundColor Green
-        $EdgeCachePath = "$env:LOCALAPPDATA\Packages\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\AC\#!001\MicrosoftEdge\Cache"
-        Remove-Item -Path $EdgeCachePath -Force -Recurse -ErrorAction SilentlyContinue
-        $optimizationDetails += "Cleared Microsoft Edge browser cache."
-    }
-
-    # Function to clear Chrome browser cache
-    function Clear-ChromeBrowserCache {
-        Write-Host "Clearing Google Chrome browser cache..." -ForegroundColor Green
-        $ChromeCachePath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cache"
-        Remove-Item -Path $ChromeCachePath -Force -Recurse -ErrorAction SilentlyContinue
-        $optimizationDetails += "Cleared Google Chrome browser cache."
-    }
-
-    # Function to clear Firefox browser cache
-    function Clear-FirefoxBrowserCache {
-        Write-Host "Clearing Mozilla Firefox browser cache..." -ForegroundColor Green
-        $FirefoxCachePath = "$env:LOCALAPPDATA\Mozilla\Firefox\Profiles"
-        $FirefoxProfiles = Get-ChildItem -Path $FirefoxCachePath -Directory
-        foreach ($profile in $FirefoxProfiles) {
-            $cachePath = Join-Path -Path $profile.FullName -ChildPath 'cache2'
-            if (Test-Path -Path $cachePath) {
-                Remove-Item -Path $cachePath -Force -Recurse -ErrorAction SilentlyContinue
-            }
-        }
-        $optimizationDetails += "Cleared Mozilla Firefox browser cache."
-    }
 
     # Clear browser caches (Edge, Chrome, Firefox)
     Write-Host "Clearing browser caches..." -ForegroundColor Green
@@ -305,18 +248,6 @@ function Execute-SystemOptimizations {
     }
 }
 
-# Define function for reverting changes
-function Revert-Changes {
-    cls
-    $currentUser = $env:USERNAME
-    Write-Host "Welcome to Plug Enhancements, $currentUser!" -ForegroundColor Yellow
-    Write-Host "Reverting Plug Enhancements..." -ForegroundColor Red
-
-    # Implement revert logic here if needed
-
-    Write-Host "Revert completed." -ForegroundColor Yellow
-}
-
 # Main script logic
 do {
     Show-Menu
@@ -327,7 +258,8 @@ do {
             break
         }
         '2' {
-            Revert-Changes
+            Write-Host "Reverting changes..." -ForegroundColor Red
+            # Add logic here to revert changes if needed
             break
         }
         '3' {
